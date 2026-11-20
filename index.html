@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Radius: a radial platformer where gravity is a vector field pointing to the planet core." />
+  <title>RADIUS · Radial Vector Field Platformer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main id="stage">
+    <canvas id="game" aria-label="Juego Radius"></canvas>
+
+    <!-- ---------------------------------------------------------------- HUD -->
+    <header id="hud" class="hud is-hidden">
+      <div class="hud-group">
+        <div class="hud-item">
+          <span class="hud-label">NIVEL</span>
+          <span class="hud-value"><span id="hud-level">1</span><span class="hud-sub">/5</span></span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">TIEMPO</span>
+          <span class="hud-value"><span id="hud-time">0.0</span><span class="hud-sub">s</span></span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">SEMILLA</span>
+          <span id="hud-seed" class="hud-value hud-small">0000</span>
+        </div>
+      </div>
+      <div class="hud-group hud-actions">
+        <button id="btn-field" class="chip" type="button" aria-pressed="false">CAMPO <kbd>F</kbd></button>
+        <button id="btn-math" class="chip" type="button" aria-pressed="false">MATEMÁTICAS <kbd>M</kbd></button>
+        <button id="btn-pause" class="chip" type="button">PAUSA <kbd>P</kbd></button>
+      </div>
+    </header>
+
+    <!-- ------------------------------------------------------- LEVEL BANNER -->
+    <div id="banner" class="banner is-hidden">
+      <span id="banner-kicker" class="banner-kicker">NIVEL 1</span>
+      <h2 id="banner-title" class="banner-title">Órbita Exterior</h2>
+      <p id="banner-sub" class="banner-sub">3 anillos</p>
+    </div>
+
+    <!-- ---------------------------------------------------------- MATH PANEL -->
+    <section id="math-panel" class="panel math-panel is-hidden" aria-live="off">
+      <header class="panel-head">
+        <h3>Campo gravitatorio radial</h3>
+        <span class="panel-tag">Cálculo vectorial</span>
+      </header>
+
+      <div class="formula">F(p) = −g · p / ‖p‖</div>
+      <div class="formula formula-small">F(x, y) = ( −g·x/r , −g·y/r ),&nbsp; r = √(x² + y²)</div>
+
+      <ul class="props">
+        <li><span>Magnitud</span><b>‖F‖ = g</b></li>
+        <li><span>Divergencia</span><b>∇·F = −g / r</b></li>
+        <li><span>Rotacional</span><b>∇×F = 0</b></li>
+        <li><span>Potencial</span><b>V = g·r</b></li>
+      </ul>
+
+      <div class="readout">
+        <div class="readout-title">Evaluado en el jugador</div>
+        <div class="readout-row"><span>p</span><b id="m-pos">(0, 0)</b></div>
+        <div class="readout-row"><span>F(p)</span><b id="m-field">(0, 0)</b></div>
+        <div class="readout-row"><span>‖F‖</span><b id="m-mag">0</b></div>
+        <div class="readout-row"><span>∇·F numérica</span><b id="m-div">0</b></div>
+        <div class="readout-row"><span>∇×F numérica</span><b id="m-curl">0</b></div>
+        <div class="readout-row"><span>V(p)</span><b id="m-pot">0</b></div>
+        <div class="readout-row"><span>Energía E</span><b id="m-energy">0</b></div>
+      </div>
+
+      <p class="panel-note">
+        La aceleración del jugador es a = F(p)/m en cada paso de integración.
+        Como ∇×F = 0 el campo es conservador, por lo que la energía mecánica
+        E = ½m‖v‖² + V(p) se mantiene constante durante el vuelo.
+      </p>
+    </section>
+
+    <!-- --------------------------------------------------------------- MENU -->
+    <section id="menu" class="overlay">
+      <div class="card">
+        <p class="eyebrow">Proyecto final · Cálculo vectorial</p>
+        <h1 class="title">RADIUS</h1>
+        <p class="lead">
+          Un plataformas radial. Cada nivel es un planeta hueco y la gravedad
+          es un <b>campo vectorial</b> cuyos vectores apuntan siempre al núcleo.
+          Desciende por los anillos hasta el centro.
+        </p>
+
+        <div class="controls">
+          <div class="control"><kbd>A</kbd><kbd>D</kbd><span>girar por la superficie</span></div>
+          <div class="control"><kbd>ESPACIO</kbd><span>saltar hacia afuera</span></div>
+          <div class="control"><kbd>F</kbd><span>ver el campo vectorial</span></div>
+          <div class="control"><kbd>M</kbd><span>panel de matemáticas</span></div>
+          <div class="control"><kbd>R</kbd><span>reiniciar nivel</span></div>
+          <div class="control"><kbd>P</kbd><span>pausa</span></div>
+        </div>
+
+        <button id="btn-start" class="btn btn-primary" type="button">INICIAR MISIÓN</button>
+        <p class="hint">5 planetas generados proceduralmente · sin instalar nada</p>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------ LEVEL CLEARED -->
+    <section id="clear" class="overlay is-hidden">
+      <div class="card card-small">
+        <p class="eyebrow">Núcleo alcanzado</p>
+        <h2 class="title title-small">NIVEL <span id="clear-level">1</span> COMPLETADO</h2>
+        <p class="lead">Tiempo del nivel: <b id="clear-time">0.0 s</b></p>
+        <button id="btn-next" class="btn btn-primary" type="button">SIGUIENTE PLANETA</button>
+        <p class="hint">Enter para continuar</p>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------------------- WIN -->
+    <section id="win" class="overlay is-hidden">
+      <div class="card card-small">
+        <p class="eyebrow">Misión completada</p>
+        <h2 class="title title-small">LLEGASTE AL FONDO</h2>
+        <p class="lead">Tiempo total: <b id="win-time">0.0 s</b></p>
+        <p class="lead lead-dim">
+          Cinco planetas, cinco campos gravitatorios. La gravedad nunca dejó de
+          apuntar al centro.
+        </p>
+        <button id="btn-restart" class="btn btn-primary" type="button">JUGAR OTRA VEZ</button>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- PAUSE -->
+    <section id="pause" class="overlay is-hidden">
+      <div class="card card-small">
+        <h2 class="title title-small">PAUSA</h2>
+        <p class="lead">El campo gravitatorio espera.</p>
+        <button id="btn-resume" class="btn btn-primary" type="button">CONTINUAR</button>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------------------- TOUCH -->
+    <div id="touch" class="touch is-hidden">
+      <button class="touch-btn" data-action="left" type="button">◀</button>
+      <button class="touch-btn" data-action="right" type="button">▶</button>
+      <button class="touch-btn touch-jump" data-action="jump" type="button">SALTAR</button>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/vec2.js"></script>
+  <script src="js/field.js"></script>
+  <script src="js/planet.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
